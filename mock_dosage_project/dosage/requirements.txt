@@ -1,0 +1,11 @@
+asgiref==3.7.2
+coverage==7.4.2
+Django==5.0.2
+iniconfig==2.0.0
+packaging==23.2
+pluggy==1.4.0
+pytest==8.0.1
+pytest-cov==4.1.0
+pytest-django==4.8.0
+python-decouple==3.8
+sqlparse==0.4.4
