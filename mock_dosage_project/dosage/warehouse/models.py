@@ -1,7 +1,53 @@
-from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager, PermissionsMixin,)
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.timezone import now
+
+
+class UserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
+    surname = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['name', 'surname']
+
+    def __str__(self):
+        return f'{self.surname}_{self.name[:1]}'
+
+
+class BasicInformation(models.Model):
+    created_at = models.DateField(auto_now_add=True, editable=False)
+    created_by = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True, blank=True, auto_created=User)
+    updated_at = models.DateField(auto_now=True, editable=False)
+    extra_info = models.TextField(max_length=250, blank=True)
+
+    class Meta:
+        abstract = True
+        ordering = ('created_at',)
+        verbose_name = "Basic information"
+        verbose_name_plural = "Basic information"
 
 
 BOX_FORM_CHOICES = [
@@ -24,14 +70,21 @@ BOX_FORM_CHOICES = [
 ]
 
 
-class Storage(models.Model):
-    rack = models.CharField(max_length=3)
+class Storage(BasicInformation):
+    rack_validator = RegexValidator(
+        regex=r'^\d{2}$',
+        message="Enter a two digit rack number (01, 02, 11,...)",
+        code='invalid_rack'
+    )
+
+    rack = models.CharField(max_length=2, validators=[rack_validator], help_text="Enter a two digit rack number(01, 11,...)")
     box = models.CharField(choices=BOX_FORM_CHOICES, blank=False, max_length=5)
-    extra_info = models.TextField(max_length=250, blank=True)
 
     class Meta:
         unique_together = ['rack', 'box']
         ordering = ['rack', 'box']
+        verbose_name = "Storage"
+        verbose_name_plural = "Storages"
 
     def __str__(self):
         return f'R{self.rack} {self.box}'
@@ -71,21 +124,21 @@ USAGE_TIME_UNIT_CHOICES = [
     ]
 
 
-class ApprovedDrug(models.Model):
+class ApprovedDrug(BasicInformation):
     name = models.CharField(max_length=40)
     is_approved = models.BooleanField(default=True)
     components = models.TextField(max_length=300, null=True, blank=True)
     main_component_dosage = models.CharField(max_length=20)
     label = models.FileField(upload_to='uploads/drug_labels')
     form = models.CharField(max_length=20, choices=DRUG_FORM_CHOICES)
-    created_at = models.DateField(auto_now_add=True, editable=False)
-    extra_info = models.TextField(max_length=250, blank=True, null=True)
     usage_time = models.PositiveIntegerField(blank=False)
     usage_time_unit = models.CharField(max_length=20, choices=USAGE_TIME_UNIT_CHOICES, blank=False)
 
     class Meta:
         unique_together = ['name', 'main_component_dosage', 'form']
-        ordering = ['name', 'form']
+        ordering = ['created_at']
+        verbose_name = "Approved drug"
+        verbose_name_plural = "Approved drugs"
 
     def __str__(self):
         if not self.is_approved:
@@ -117,22 +170,21 @@ QUANTITY_USAGE_CHOICES = [
     ]
 
 
-class Product(models.Model):
+class Product(BasicInformation):
     approved_drug = models.ForeignKey(ApprovedDrug, on_delete=models.DO_NOTHING)
     serial_number = models.CharField(max_length=20)
     quantity = models.PositiveIntegerField(null=False, blank=False)
     quantity_unit = models.CharField(max_length=20, choices=QUANTITY_USAGE_CHOICES)
     storage = models.ForeignKey(Storage, on_delete=models.DO_NOTHING, blank=False)
-    created_by = models.ForeignKey(User, on_delete=models.DO_NOTHING)
-    created_at = models.DateField(auto_now_add=True)
     best_before_date = models.DateField(blank=False, null=False)
     is_opened = models.BooleanField(default=False, blank=True, null=True)
     opened_date = models.DateField(blank=True, null=True)
-    extra_info = models.CharField(max_length=250, null=True, blank=True)
 
     class Meta:
         unique_together = ['approved_drug', 'serial_number']
         ordering = ['created_at']
+        verbose_name = "Product"
+        verbose_name_plural = "Products"
 
     def __str__(self):
         return f"{self.approved_drug}, {self.quantity}{self.quantity_unit}"

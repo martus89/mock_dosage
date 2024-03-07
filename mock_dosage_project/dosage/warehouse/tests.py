@@ -1,10 +1,24 @@
-from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from .models import Product, ApprovedDrug, Storage, BOX_FORM_CHOICES, USAGE_TIME_UNIT_CHOICES, DRUG_FORM_CHOICES
+from .models import Product, ApprovedDrug, Storage, BOX_FORM_CHOICES
 from django.contrib.auth.models import User
 from django.utils.timezone import now
+from django.test import TestCase
+from django.contrib.auth import get_user_model
+
+
+class ModelTests(TestCase):
+    def test_create_user_with_email_successful(self):
+        email = 'test@example.com'
+        password = 'testpass123'
+        user = get_user_model().objects.create_user(
+            email=email,
+            password=password,
+        )
+
+        self.assertEqual(user.email, email)
+        self.assertTrue(user.check_password(password))
 
 
 class StorageModels(TestCase):
@@ -28,6 +42,9 @@ class StorageModels(TestCase):
         storage1.save()
 
         storage2 = Storage(rack="01", box="1F-A")
+
+        # TODO:change exception - create your own exception
+
         with self.assertRaises(Exception):
             storage2.full_clean()
             storage2.save()
