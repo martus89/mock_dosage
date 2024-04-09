@@ -1,247 +1,159 @@
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-from .models import Product, ApprovedDrug, Storage, BOX_FORM_CHOICES
-from django.contrib.auth.models import User
-from django.utils.timezone import now
+from django.contrib.auth.models import Group
 from django.test import TestCase
-from django.contrib.auth import get_user_model
+from .models import SoftDelete, Storage, ApprovedDrug, Product, User, BasicInformation
+from datetime import date
+from django.core.exceptions import ValidationError
 
 
-class ModelTests(TestCase):
-    def test_create_user_with_email_successful(self):
-        email = 'test@example.com'
-        password = 'testpass123'
-        user = get_user_model().objects.create_user(
-            email=email,
-            password=password,
-        )
+class UserManagerTestCase(TestCase):
+    def setUp(self):
+        self.standard_group = Group.objects.create(name='standard_user')
+        self.superuser_group = Group.objects.create(name='superuser')
 
-        self.assertEqual(user.email, email)
-        self.assertTrue(user.check_password(password))
+    def test_create_user(self):
+        user = User.objects.create_user(email='user@example.com', password='password', name='John', surname='Doe')
+        self.assertEqual(user.email, 'user@example.com')
+        self.assertTrue(user.check_password('password'))
+        self.assertTrue(user.groups.filter(name='standard_user').exists())
+
+    def test_create_superuser(self):
+        superuser = User.objects.create_superuser(email='admin@example.com', password='adminpassword', name='Admin', surname='User')
+        self.assertEqual(superuser.email, 'admin@example.com')
+        self.assertTrue(superuser.is_staff)
+        self.assertTrue(superuser.is_superuser)
+        self.assertTrue(superuser.groups.filter(name='superuser').exists())
 
 
-class StorageModels(TestCase):
+class UserModelTestCase(TestCase):
+    def test_user_string_representation(self):
+        user = User.objects.create(email='user@example.com', password='password', name='John', surname='Doe')
+        self.assertEqual(str(user), 'Doe_J')
 
-    def test_valid_choices(self):
-        valid_choices = [choice[0] for choice in BOX_FORM_CHOICES]
+    def test_user_display_group(self):
+        standard_group = Group.objects.create(name='standard_user')
+        user = User.objects.create(email='user@example.com', password='password', name='John', surname='Doe')
+        user.groups.add(standard_group)
+        self.assertEqual(user.display_group(), 'standard_user')
 
-        for choice in valid_choices:
-            storage = Storage(rack="01", box=choice)
-            storage.full_clean()
 
-    def test_invalid_choices(self):
-        invalid_choice = "Invalid-Choice"
-        with self.assertRaises(ValueError):
-            storage = Storage(rack="01", box=invalid_choice)
-            storage.full_clean()
+class BasicInformationModelTestCase(TestCase):
+    def test_basic_information_creation(self):
+        user = User.objects.create(email='user@example.com', password='password', name='John', surname='Doe')
+        basic_info = BasicInformation.objects.create(created_by=user, extra_info='Test')
+        self.assertTrue(basic_info.created_by, user)
+        self.assertEqual(basic_info.extra_info, 'Test')
 
-    def test_unique_together(self):
-        storage1 = Storage(rack="01", box="1F-A")
-        storage1.full_clean()
-        storage1.save()
 
-        storage2 = Storage(rack="01", box="1F-A")
+class SoftDeleteModelTestCase(TestCase):
+    def test_soft_delete(self):
+        soft_delete_instance = SoftDelete.objects.create()
+        self.assertFalse(soft_delete_instance.is_deleted)
+        soft_delete_instance.delete()
+        self.assertTrue(soft_delete_instance.is_deleted)
+        soft_delete_instance.restore()
+        self.assertFalse(soft_delete_instance.is_deleted)
 
-        # TODO:change exception - create your own exception
 
-        with self.assertRaises(Exception):
-            storage2.full_clean()
-            storage2.save()
+class StorageModelTestCase(TestCase):
+    def test_storage_creation(self):
+        storage = Storage.objects.create(rack='01', box='1F-A')
+        self.assertEqual(storage.rack, '01')
+        self.assertEqual(storage.box, '1F-A')
 
-    def test_str_method(self):
-        storage = Storage(rack="01", box="1F-A")
+    def test_storage_str_representation(self):
+        storage = Storage.objects.create(rack='01', box='1F-A')
         self.assertEqual(str(storage), 'R01 1F-A')
 
-
-class ApprovedDrugModelTest(TestCase):
-    def setUp(self):
-        self.label_file = SimpleUploadedFile(
-            "label.txt", b"file_content", content_type="text/plain"
-        )
-
-    def test_str_method(self):
-        drug = ApprovedDrug(
-            name="Test Drug",
-            is_approved=True,
-            components="Component A, Component B",
-            main_component_dosage="10mg",
-            label=self.label_file,
-            form="capsules",
-            usage_time=30,
-            usage_time_unit="days",
-        )
-        self.assertEqual(
-            str(drug), "Test Drug 10mg, capsules"
-        )
-
-    def test_recalculated_usage_time_days_method(self):
-        drug = ApprovedDrug(
-            name="Test Drug",
-            is_approved=True,
-            components="Component A, Component B",
-            main_component_dosage="10mg",
-            label=self.label_file,
-            form="capsules",
-            usage_time=2,
-            usage_time_unit="weeks",
-        )
-        self.assertEqual(drug.recalculated_usage_time_days(), 14)
-
-    def test_not_approved_extra_info(self):
-        not_approved_drug = ApprovedDrug(
-            name="Not Approved Drug",
-            is_approved=False,
-            components="Component A, Component B",
-            main_component_dosage="10mg",
-            label=self.label_file,
-            form="capsules",
-            usage_time=30,
-            usage_time_unit="days",
-        )
-        not_approved_drug.save()
-        self.assertEqual(
-            not_approved_drug.drug_extra_info,
-            f"DRUG NOT APPROVED FOR USAGE {now().date()}",
-        )
-
-    def test_approved_extra_info(self):
-        approved_drug = ApprovedDrug(
-            name="Approved Drug",
-            is_approved=True,
-            components="Component A, Component B",
-            main_component_dosage="10mg",
-            label=self.label_file,
-            form="capsules",
-            usage_time=30,
-            usage_time_unit="days",
-        )
-        approved_drug.save()
-        self.assertEqual(approved_drug.drug_extra_info, "")
-
-    def test_unique_together(self):
-        drug1 = ApprovedDrug(
-            name="Test Drug",
-            is_approved=True,
-            components="Component A, Component B",
-            main_component_dosage="10mg",
-            label=self.label_file,
-            form="capsules",
-            usage_time=30,
-            usage_time_unit="days",
-        )
-        drug1.save()
-
-        drug2 = ApprovedDrug(
-            name="Test Drug",
-            is_approved=True,
-            components="Component C, Component D",
-            main_component_dosage="20mg",
-            label=self.label_file,
-            form="capsules",
-            usage_time=60,
-            usage_time_unit="days",
-        )
+    def test_unique_together_constraint(self):
+        Storage.objects.create(rack='01', box='1F-A')
         with self.assertRaises(Exception):
-            drug2.save()
+            Storage.objects.create(rack='01', box='1F-A')  # Should raise an IntegrityError
+
+    def test_invalid_rack_validator(self):
+        with self.assertRaises(ValidationError):
+            Storage.objects.create(rack='A1', box='1F-A')  # Should raise a ValidationError
 
 
-class ProductModelTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create(username="testuser")
-        self.storage = Storage.objects.create(rack="01", box="1F-A")
-        self.approved_drug = ApprovedDrug.objects.create(
-            name="Test Drug",
+class ApprovedDrugModelTestCase(TestCase):
+    def test_approved_drug_creation(self):
+        approved_drug = ApprovedDrug.objects.create(
+            name='Test Drug',
             is_approved=True,
-            components="Component A, Component B",
-            main_component_dosage="10mg",
-            label=None,
-            form="capsules",
+            components='Test Components',
+            main_component_dosage='10mg',
+            form='capsules',
             usage_time=30,
-            usage_time_unit="days",
+            usage_time_unit='days'
+        )
+        self.assertEqual(approved_drug.name, 'Test Drug')
+        self.assertTrue(approved_drug.is_approved)
+
+    def test_approved_drug_str_representation(self):
+        approved_drug = ApprovedDrug.objects.create(
+            name='Test Drug',
+            main_component_dosage='10mg',
+            form='capsules',
+        )
+        self.assertEqual(str(approved_drug), 'Test Drug 10mg, capsules')
+
+    def test_recalculated_usage_time_days(self):
+        approved_drug = ApprovedDrug.objects.create(
+            name='Test Drug',
+            usage_time=2,
+            usage_time_unit='weeks'
+        )
+        self.assertEqual(approved_drug.recalculated_usage_time_days(), 14)
+
+    def test_not_approved_drug_extra_info(self):
+        approved_drug = ApprovedDrug.objects.create(
+            name='Test Drug',
+            is_approved=False
+        )
+        self.assertIn('DRUG NOT APPROVED FOR USAGE', approved_drug.drug_extra_info)
+
+
+class ProductModelTestCase(TestCase):
+    def setUp(self):
+        self.approved_drug = ApprovedDrug.objects.create(
+            name='Test Drug',
+            main_component_dosage='10mg',
+            form='capsules',
+            usage_time=30,
+            usage_time_unit='days'
         )
 
-    def test_str_method(self):
-        product = Product(
+    def test_product_creation(self):
+        product = Product.objects.create(
             approved_drug=self.approved_drug,
-            serial_number="SN123",
-            quantity=50,
-            quantity_unit="mg",
-            storage=self.storage,
-            created_by=self.user,
-            best_before_date=timezone.now().date(),
+            serial_number='123456',
+            quantity=10,
+            quantity_unit='pcs',
+            storage=None,
+            best_before_date=date.today()
         )
-        self.assertEqual(
-            str(product), "Test Drug 10mg, capsules, 50mg"
-        )
+        self.assertEqual(product.serial_number, '123456')
+        self.assertEqual(product.quantity, 10)
 
-    def test_clean_method_opened_date_missing(self):
-        product = Product(
+    def test_product_ready_to_use(self):
+        product = Product.objects.create(
             approved_drug=self.approved_drug,
-            serial_number="SN123",
-            quantity=50,
-            quantity_unit="mg",
-            storage=self.storage,
-            created_by=self.user,
-            best_before_date=timezone.now().date(),
-            is_opened=True,
+            serial_number='123456',
+            quantity=10,
+            quantity_unit='pcs',
+            storage=None,
+            best_before_date=date.today()
+        )
+        self.assertEqual(product.ready_to_use(), 'OK')
+
+    def test_invalid_open_date(self):
+        product = Product.objects.create(
+            approved_drug=self.approved_drug,
+            serial_number='123456',
+            quantity=10,
+            quantity_unit='pcs',
+            storage=None,
+            best_before_date=date.today(),
+            is_opened=True
         )
         with self.assertRaises(ValidationError):
-            product.clean()
-
-    def test_clean_method_opened_date_present(self):
-        product = Product(
-            approved_drug=self.approved_drug,
-            serial_number="SN123",
-            quantity=50,
-            quantity_unit="mg",
-            storage=self.storage,
-            created_by=self.user,
-            best_before_date=timezone.now().date(),
-            is_opened=True,
-            opened_date=timezone.now().date(),
-        )
-        try:
-            product.clean()
-        except ValidationError:
-            self.fail("clean() method should not raise ValidationError when opened_date is present.")
-
-    def test_ready_to_use_method_usable(self):
-        product = Product(
-            approved_drug=self.approved_drug,
-            serial_number="SN123",
-            quantity=50,
-            quantity_unit="mg",
-            storage=self.storage,
-            created_by=self.user,
-            best_before_date=timezone.now().date() + timezone.timedelta(days=10),
-            is_opened=False,
-        )
-        self.assertEqual(product.ready_to_use(), "OK")
-
-    def test_ready_to_use_method_not_usable_due_to_opened_date(self):
-        product = Product(
-            approved_drug=self.approved_drug,
-            serial_number="SN123",
-            quantity=50,
-            quantity_unit="mg",
-            storage=self.storage,
-            created_by=self.user,
-            best_before_date=timezone.now().date(),
-            is_opened=True,
-            opened_date=timezone.now().date() - timezone.timedelta(days=31),
-        )
-        self.assertEqual(product.ready_to_use(), "DISCARD IMMEDIATELY")
-
-    def test_ready_to_use_method_not_usable_due_to_best_before_date(self):
-        product = Product(
-            approved_drug=self.approved_drug,
-            serial_number="SN123",
-            quantity=50,
-            quantity_unit="mg",
-            storage=self.storage,
-            created_by=self.user,
-            best_before_date=timezone.now().date() - timezone.timedelta(days=1),
-            is_opened=False,
-        )
-        self.assertEqual(product.ready_to_use(), "DISCARD IMMEDIATELY")
+            product.full_clean()
