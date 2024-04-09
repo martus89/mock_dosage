@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dosage - {% block title %}Default Title{% endblock %}</title>
+</head>
+<body>
+    <header>{% block header %}{% endblock %}
+    </header>
+    <main>
+    {% if messages %}
+    {% for message in messages %}
+        {{ message }}
+    {% endfor %}
+    {% endif %}
+
+        {% block content %}My site content{% endblock %}
+
+    </main>
+    <footer>
+    </footer>
+</body>
+</html>
