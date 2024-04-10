@@ -2,8 +2,6 @@
 
 {% block title %}login{% endblock %}
 
-
-
 {% block content %}
     {% if user.is_authenticated %}
 
@@ -11,5 +9,6 @@
         {% csrf_token %}
         <button type="submit">Logout</button>
         </form>
+        <a href="{% url 'change_password' %}">Change password</a>
     {% endif %}
 {% endblock %}
