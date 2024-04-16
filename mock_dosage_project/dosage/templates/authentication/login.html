@@ -2,8 +2,6 @@
 
 {% block title %}Login{% endblock %}
 
-{% block header %}Login Page{% endblock %}
-
 {% block content %}
 <form method="post" action="{% url 'login' %}">
     {% csrf_token %}

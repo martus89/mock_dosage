@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.http import HttpResponse
 from .models import Storage, ApprovedDrug, Product, User
+from simple_history.admin import SimpleHistoryAdmin
 
 
 class ExportCsvMixin:
@@ -22,9 +23,6 @@ class ExportCsvMixin:
         return response
 
     export_as_csv.short_description = "Export to CSV file"
-
-
-    #TODO:Why this modeladmin below is green?
 
 
 @admin.action(description='List as staff',)
@@ -59,7 +57,7 @@ class UserAdmin(BaseUserAdmin):
 
 
 @admin.register(Storage)
-class StorageAdmin(admin.ModelAdmin, ExportCsvMixin):
+class StorageAdmin(SimpleHistoryAdmin, admin.ModelAdmin, ExportCsvMixin):
     list_display = ('rack', 'box', 'extra_info', 'created_at', 'created_by', 'updated_at')
     search_fields = ['rack', 'box']
     list_filter = ['rack']
@@ -87,7 +85,7 @@ def make_unapproved(modeladmin, request, queryset):
 
 
 @admin.register(ApprovedDrug)
-class ApprovedDrugAdmin(admin.ModelAdmin, ExportCsvMixin):
+class ApprovedDrugAdmin(SimpleHistoryAdmin, admin.ModelAdmin, ExportCsvMixin):
     list_display = ('name', 'components', 'form', 'created_at', 'created_by', 'updated_at', 'usage_time',
                     'usage_time_unit', 'is_approved', 'extra_info')
     search_fields = ['name', 'form', 'created_at']
@@ -117,12 +115,11 @@ def make_unopened(modeladmin, request, queryset):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin, ExportCsvMixin):
+class ProductAdmin(SimpleHistoryAdmin, admin.ModelAdmin, ExportCsvMixin):
     list_display = ('approved_drug', 'serial_number', 'storage', 'quantity', 'quantity_unit',
-                    'best_before_date', 'is_opened', 'ready_to_use', 'created_at', 'created_by', 'updated_at',
-                    'is_deleted')
-    search_fields = ['approved_drug', 'serial_number', 'storage', 'created_by', 'is_opened', 'is_deleted']
-    list_filter = ['is_opened', 'created_by', 'is_deleted']
+                    'best_before_date', 'is_opened', 'ready_to_use', 'created_at', 'created_by', 'updated_at')
+    search_fields = ['approved_drug', 'serial_number', 'storage', 'created_by', 'is_opened']
+    list_filter = ['is_opened', 'created_by']
     actions = [make_opened, make_unopened, ExportCsvMixin.export_as_csv]
     LIST_PER_PAGE = 50
 

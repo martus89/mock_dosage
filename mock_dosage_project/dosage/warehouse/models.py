@@ -4,6 +4,7 @@ from django.core.validators import RegexValidator
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.timezone import now
+from simple_history.models import HistoricalRecords
 
 
 class UserManager(BaseUserManager):
@@ -39,6 +40,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['name', 'surname']
+
+    history = HistoricalRecords()
 
     def __str__(self):
         return f'{self.surname}_{self.name[:1]}'
@@ -115,16 +118,21 @@ RACK_VALIDATOR = RegexValidator(
 )
 
 
-class Storage(BasicInformation):
+class Storage(SoftDelete, BasicInformation):
 
     rack = models.CharField(max_length=2, validators=[RACK_VALIDATOR], help_text=RACK_VALIDATOR.message)
     box = models.CharField(choices=BOX_FORM_CHOICES, blank=False, max_length=5)
+
+    history = HistoricalRecords()
 
     class Meta:
         unique_together = ['rack', 'box']
         ordering = ['rack', 'box']
         verbose_name = "Storage"
         verbose_name_plural = "Storages"
+
+    def count_products_in_box(self):
+        return Product.objects.filter(storage=self).count()
 
     def __str__(self):
         return f'R{self.rack} {self.box}'
@@ -164,15 +172,17 @@ USAGE_TIME_UNIT_CHOICES = [
     ]
 
 
-class ApprovedDrug(BasicInformation):
+class ApprovedDrug(SoftDelete, BasicInformation):
     name = models.CharField(max_length=40)
     is_approved = models.BooleanField(default=True)
     components = models.TextField(max_length=300, null=True, blank=True)
     main_component_dosage = models.CharField(max_length=20)
-    label = models.FileField(upload_to='uploads/drug_labels')
+    label = models.FileField(upload_to='uploads/')
     form = models.CharField(max_length=20, choices=DRUG_FORM_CHOICES)
     usage_time = models.PositiveIntegerField(blank=False)
     usage_time_unit = models.CharField(max_length=20, choices=USAGE_TIME_UNIT_CHOICES, blank=False)
+
+    history = HistoricalRecords()
 
     class Meta:
         unique_together = ['name', 'main_component_dosage', 'form']
@@ -210,7 +220,7 @@ QUANTITY_USAGE_CHOICES = [
     ]
 
 
-class Product(BasicInformation, SoftDelete):
+class Product(SoftDelete, BasicInformation):
     approved_drug = models.ForeignKey(ApprovedDrug, on_delete=models.DO_NOTHING)
     serial_number = models.CharField(max_length=20)
     quantity = models.PositiveIntegerField(null=False, blank=False)
@@ -220,6 +230,8 @@ class Product(BasicInformation, SoftDelete):
     is_opened = models.BooleanField(default=False, blank=True, null=True)
     opened_date = models.DateField(blank=True, null=True)
 
+    history = HistoricalRecords()
+
     class Meta:
         unique_together = ['approved_drug', 'serial_number']
         ordering = ['created_at']
@@ -227,7 +239,7 @@ class Product(BasicInformation, SoftDelete):
         verbose_name_plural = "Products"
 
     def __str__(self):
-        return f"{self.approved_drug}, {'serial_number'}, {self.quantity}{self.quantity_unit}"
+        return f"{self.approved_drug}, {self.serial_number}, {self.quantity}{self.quantity_unit}"
 
     def clean(self, *args, **kwargs):
         if self.is_opened and not self.opened_date:

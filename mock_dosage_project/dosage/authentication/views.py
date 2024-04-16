@@ -19,3 +19,5 @@ def registration_form(request):
 def login_success(request):
     messages.add_message(request, messages.SUCCESS, f"Hello {request.user.name}! You are logged in now.")
     return render(request, 'authentication/login_success.html')
+
+
