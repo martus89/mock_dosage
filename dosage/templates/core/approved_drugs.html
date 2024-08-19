@@ -1,0 +1,78 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{% endblock %}
+
+{% block content %}
+        <br><br>
+        <form action='' method="post">
+        {% csrf_token %}
+        <a href="{% url 'add_approved_drug' %}" class="btn btn-link">+ Add Approved Drug</a>
+    </form>
+
+    <br><br>
+    <h3>Sort Data:</h3>
+    <form method="GET">
+        {{ sorting_form.as_p }}
+        <button type="submit">Sort</button>
+    </form>
+
+    <br><br>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th></th>
+            <th>Drug name</th>
+            <th>Drug form</th>
+            <th>Main component dose</th>
+            <th>Approved</th>
+            <th>Controlled</th>
+            <th>Components</th>
+            <th>Label</th>
+            <th>Usage time</th>
+            <th>Nr of boxes</th>
+            <th></th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for drug in page_obj %}
+        <tr>
+            <td><input type="checkbox" name="selected_storages" value="{{ drug.id }}"></td>
+            <td> <a href="{% url 'approved_drug_by_name' drug.name %}">{{ drug.str_prefix }}{{ drug.name }}</a></td>
+            <td>{{ drug.form }}</td>
+            <td>{{ drug.main_component_dosage }}{{ drug.main_component_unit }}</td>
+            <td>{% if drug.is_approved %}
+                Approved
+                {% else %}
+                NOT APPROVED
+                {% endif %}
+            </td>
+               <td>{% if drug.is_controlled %}
+                CONTROLLED
+                {% else %}
+                -
+                {% endif %}
+            </td>
+            <td>{{ drug.components }}</td>
+            <td><a href="{{ drug.label.url }}" target="_blank">View Label</a></td>
+            <td>{{ drug.usage_time }} {{ drug.usage_time_unit }}</td>
+            <td> <a href="{% url 'products_by_approved_drug' drug.id %}"> {{ drug.product_set.count }} </a></td>
+
+            <td><a href="{% url 'edit_approved_drug' drug.id %}" class="btn btn-link"> Edit </a></td>
+            <td><a href="{% url 'approved_drugs_history' drug.id %}">View History</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+    <br><br>
+
+{% if page_obj.has_previous %}
+<a href="?page=1">Page 1</a>
+<a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+{% endif %}
+<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+{% if page_obj.has_next %}
+<a href="?page={{ page_obj.next_page_number }}">Next</a>
+<a href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+{% endif %}
+{% endblock %}

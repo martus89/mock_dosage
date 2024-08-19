@@ -1,0 +1,11 @@
+# Project exclude paths
+/dosage/venv_dosage/
+/dosage/venv_312/
+/dosage/dosage/.env
+/dosage/dosage/uploads/
+/dosage/dosage/static/
+
+venv_dosage
+venv_312
+.idea
+dosage/uploads/

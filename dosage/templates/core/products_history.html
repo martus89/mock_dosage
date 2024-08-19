@@ -1,0 +1,34 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{% endblock %}
+
+{% block content %}
+
+    <h1>{{ products }}</h1>
+  <br>
+<p>History:</p>
+    <br><br>
+
+    <table class="table table-sm">
+  <thead>
+    <tr>
+      <th scope="col">Created</th>
+      <th scope="col">Created by</th>
+      <th scope="col">Last updated</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+        <th scope="row">{{ products.created_at }}</th>
+        <th scope="row">{{ products.created_by }}</th>
+        <th scope="row">{{ products.updated_at }}</th>
+    </tr>
+  </tbody>
+</table>
+<br>
+    <h3>Additional information: </h3>
+    <p>{{ products.extra_info |linebreaksbr }}</p>
+
+    <a href="{% url 'product_list' %}">Back to Products</a>
+    <br><br><br><br>
+{% endblock %}

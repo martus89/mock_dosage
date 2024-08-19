@@ -1,0 +1,51 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Products for {{ approved_drug.name }}{% endblock %}
+
+{% block content %}
+<h2>Products for {{ approved_drug.name }}</h2>
+
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Drug name</th>
+            <th>Main component dose</th>
+            <th>Form</th>
+            <th>Serial nr</th>
+            <th>Quantity</th>
+            <th>Storage</th>
+            <th>Best before</th>
+            <th>Ready to use</th>
+            <th>Opened</th>
+            <th></th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for product in products %}
+        <tr>
+            <td> {{ product.approved_drug.str_prefix }}{{ product.approved_drug.name }} </td>
+            <td> {{ product.approved_drug.main_component_dosage }}{{ product.approved_drug.main_component_unit }} </td>
+            <td> {{ product.approved_drug.form }} </td>
+            <td> {{ product.serial_number }} </td>
+            <td> {{ product.packaging_quantity }} {{ product.packaging_quantity_unit }}</td>
+            <td> {{ product.storage }} </td>
+            <td> {{ product.best_before_date }} </td>
+            <td> {{ product.ready_to_use }} </td>
+            <td>
+                {% if product.opened_date %}
+                    {{ product.opened_date }}
+                {% else %}
+                    NOT OPENED
+                {% endif %}
+            </td>
+            <td><a href="{% url 'edit_product' product.id %}" class="btn btn-link"> Edit </a></td>
+            <td> <a href="{% url 'product_history' product.id %}">View History</a> </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{% url 'approved_drugs_list' %}">Back to Approved Drugs</a>
+
+{% endblock %}

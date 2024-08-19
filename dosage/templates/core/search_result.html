@@ -1,0 +1,41 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Search results {% endblock %}
+
+{% block content %}
+
+<body>
+    <h1>Search Results for "{{ query }}"</h1>
+    <br><br>
+
+    <h2>Storages</h2>
+    <ul>
+        {% for storage in storages %}
+            <li><a href="{% url 'edit_storage' storage.id %}">{{ storage }}</a></li>
+        {% empty %}
+            <li>No storages found.</li>
+        {% endfor %}
+    </ul>
+    <br>
+    <h2>Products</h2>
+    <ul>
+        {% for product in products %}
+            <li><a href="{% url 'edit_product' product.id %}">{{ product }}</a></li>
+        {% empty %}
+            <li>No products found.</li>
+        {% endfor %}
+    </ul>
+        <br>
+        <h2>Approved drugs</h2>
+    <ul>
+        {% for approved_drug in approved_drugs %}
+            <li><a href="{% url 'edit_approved_drug' approved_drug.id %}">{{ approved_drug }}</a></li>
+        {% empty %}
+            <li>No approved drugs found.</li>
+        {% endfor %}
+    </ul>
+    <br>
+    <a href="{% url 'homepage' %}">Back to home</a>
+</body>
+
+{% endblock %}

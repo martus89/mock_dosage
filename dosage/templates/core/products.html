@@ -1,0 +1,72 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{% endblock %}
+
+{% block content %}
+        <br><br>
+
+        <form action='' method="post">
+        {% csrf_token %}
+        <a href="{% url 'add_product' %}" class="btn btn-link">+ Add Product</a>
+        </form>
+        <br><br>
+    <h3>Sort Data:</h3>
+    <form method="GET">
+        {{ sorting_form.as_p }}
+        <button type="submit">Sort</button>
+    </form>
+
+    <br><br>
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th></th>
+            <th>Drug name</th>
+            <th>Main component dose</th>
+            <th>Form</th>
+            <th>Serial nr</th>
+            <th>Quantity</th>
+            <th>Storage</th>
+            <th>Best before</th>
+            <th>Ready to use</th>
+            <th>Opened</th>
+            <th></th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for product in page_obj %}
+        <tr>
+            <td><input type="checkbox" name="selected_storages" value="{{ product.id }}"></td>
+            <td> {{ product.approved_drug.str_prefix }}{{ product.approved_drug.name }} </td>
+            <td> {{ product.approved_drug.main_component_dosage }}{{ product.approved_drug.main_component_unit }} </td>
+            <td> {{ product.approved_drug.form }} </td>
+            <td> {{ product.serial_number }} </td>
+            <td> {{ product.packaging_quantity }} {{ product.packaging_quantity_unit }}</td>
+            <td> {{ product.storage }} </td>
+            <td> {{ product.best_before_date }} </td>
+            <td> {{ product.ready_to_use }} </td>
+            <td>
+                {% if product.opened_date %}
+                    {{ product.opened_date }}
+                {% else %}
+                    NOT OPENED
+                {% endif %}
+            </td>
+            <td><a href="{% url 'edit_product' product.id %}" class="btn btn-link"> Edit </a></td>
+            <td> <a href="{% url 'product_history' product.id %}">View History</a> </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+    <br><br>
+{% if page_obj.has_previous %}
+<a href="?page=1">Page 1</a>
+<a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+{% endif %}
+<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+{% if page_obj.has_next %}
+<a href="?page={{ page_obj.next_page_number }}">Next</a>
+<a href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+{% endif %}
+{% endblock %}

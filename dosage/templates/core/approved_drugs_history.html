@@ -1,0 +1,35 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{% endblock %}
+
+{% block content %}
+<br>
+    <h1>{{ approved_drugs }}</h1>
+    <br>
+<p>History:</p>
+    <br><br>
+
+    <table class="table table-sm">
+  <thead>
+    <tr>
+      <th scope="col">Created</th>
+      <th scope="col">Created by</th>
+      <th scope="col">Last updated</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+        <th scope="row">{{ approved_drugs.created_at }}</th>
+        <th scope="row">{{ approved_drugs.created_by }}</th>
+        <th scope="row">{{ approved_drugs.updated_at }}</th>
+    </tr>
+  </tbody>
+</table>
+<br>
+    <h3>Additional information: </h3>
+    <p>{{ approved_drugs.extra_info |linebreaksbr }}</p>
+    <br><br>
+    <a href="{% url 'approved_drugs_list' %}">Back to Approved drugs</a>
+    <br><br><br><br>
+
+{% endblock %}
